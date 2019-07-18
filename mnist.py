@@ -97,8 +97,8 @@ class Net(nn.Module):
 
         ipdropout = nn.Dropout(0.2)
         iplayer = fc(28*28, nunits)
-        # self.layers = [ipdropout, iplayer]
-        self.layers = [iplayer]
+        self.layers = [ipdropout, iplayer]
+        # self.layers = [iplayer]
         self.layers += [nn.Dropout(0.5)]
         for idx in range(nhidden):
             self.layers += [fc(nunits, nunits)]
@@ -191,11 +191,13 @@ if __name__ == '__main__':
     parser.add_argument('--nepochs', default=300, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.01, type=float, help='Initial learning rate')
     parser.add_argument('--lr_patience', default=20, type=int, help='Learning rate patience')
+    parser.add_argument('--logpath', type=str, default='./logs/', 
+                            help='Save path for the logs')
     parser.add_argument('--cuda', type=str, default='y',
                             help='y uses GPU. n uses CPU')
     args = parser.parse_args()
 
-    tboard_dir = './logs/'+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_lr'+str(args.lr)
+    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_lr'+str(args.lr)
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
