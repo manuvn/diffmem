@@ -177,6 +177,10 @@ def validate(loss_vector, accuracy_vector):
     return accuracy
 
 if __name__ == '__main__':
+    """
+    Run script: 
+    python mnist.py --nntype=NoisyBinary --nunits=1024 --nhidden=3 --batch_size=100 --nepochs=200
+    """
 
     # tensorboard --logdir logs
     parser = argparse.ArgumentParser(description='MNIST binary MLP')
