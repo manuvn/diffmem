@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 import torch
+# from torch.Tensor import masked_fill_ as masked_fill
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tensorboardX import SummaryWriter
+
 
 sns.set()
 if torch.cuda.is_available():
@@ -25,12 +27,17 @@ def get_lr(optimizer):
 def where(cond, x1, x2):
     return cond.float() * x1 + (1 - cond.float()) * x2
 
+def ClipW(weight):
+    weight = where(weight >= 1, 1, weight)
+    weight = where(weight <= -1, -1, weight)
+    return weight
+
 class Binarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, weight):
-        probs = torch.tanh(weight)
+        # probs = torch.tanh(weight)
         # binarize the weight
-        weight_b = where(probs >= 0, 1, -1)
+        weight_b = where(weight >= 0, 1, -1)
         ctx.save_for_backward(weight)
         return weight_b
 
@@ -53,32 +60,15 @@ class Binarize(torch.autograd.Function):
         return grad_weight
 binarize = Binarize.apply
 
-class BinMem(torch.autograd.Function):
+
+class BinMem(Binarize):
     @staticmethod
     def forward(ctx, weight):
-        probs = torch.tanh(weight)
+        # probs = torch.tanh(weight)
         # binarize the weight
-        weight_b = where(probs >= 0, 1, 0.0)
+        weight_b = where(weight >= 0, 1, 0.0)
         ctx.save_for_backward(weight)
         return weight_b
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        # This is a pattern that is very convenient - at the top of backward
-        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-        weight = ctx.saved_tensors
-        grad_weight = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-        if ctx.needs_input_grad[0]:
-            grad_weight = grad_output
-        return grad_weight
 binmem = BinMem.apply
 
 class BinLinear(nn.Module):
@@ -87,6 +77,8 @@ class BinLinear(nn.Module):
         self.weight = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
 
     def forward(self, input):
+        with torch.no_grad():
+            self.weight.data = ClipW(self.weight.data)
         weight_b = binarize(self.weight)
         return input.mm(weight_b)
 
@@ -96,6 +88,8 @@ class NoisyBinLinear(nn.Module):
         self.weight = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
         self.sigma = sigma
     def forward(self, input):
+        with torch.no_grad():
+            self.weight.data = ClipW(self.weight.data)
         weight_b  = binarize(self.weight)
         rand = torch.randn_like(weight_b) * self.sigma
         randweight = rand + weight_b
@@ -108,6 +102,9 @@ class DiffMemLinear(nn.Module):
         self.weightb = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
         self.sigma = sigma
     def forward(self, input):
+        with torch.no_grad():
+            self.weighta.data = ClipW(self.weighta.data)
+            self.weightb.data = ClipW(self.weightb.data)
         b_weighta  = binmem(self.weighta)
         b_weightb  = binmem(self.weightb)
         randa = torch.randn_like(b_weighta) * self.sigma
