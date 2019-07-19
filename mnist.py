@@ -2,12 +2,14 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tensorboardX import SummaryWriter
+
 
 
 sns.set()
@@ -197,7 +199,8 @@ if __name__ == '__main__':
                             help='y uses GPU. n uses CPU')
     args = parser.parse_args()
 
-    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_lr'+str(args.lr)
+    T = time.strftime("M%m_D%d_H%H_M%M")
+    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nhidden)+'_lr'+str(args.lr)+'-T'+T
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
