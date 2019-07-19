@@ -117,8 +117,9 @@ class DiffMemLinear(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, nntype='Linear', nunits=50, nhidden=3):
+    def __init__(self, nntype='Linear', nunits=50, nhidden=3, sigma=0.2):
         super(Net, self).__init__()
+        kwargs = {}
         if nntype == 'Linear':
             fc = nn.Linear
         elif nntype == 'Binary':
@@ -127,20 +128,22 @@ class Net(nn.Module):
             fc = NoisyBinLinear
         elif nntype == 'DiffMem':
             fc = DiffMemLinear
+            kwargs['sigma'] = sigma
         else:
             fc = nn.Linear
+
         ipdropout = nn.Dropout(0.2)
-        iplayer = fc(28*28, nunits)
+        iplayer = fc(28*28, nunits, **kwargs)
         self.layers = [ipdropout, iplayer]
         # self.layers = [iplayer]
         self.layers += [nn.Dropout(0.5)]
         for idx in range(nhidden):
-            self.layers += [fc(nunits, nunits)]
+            self.layers += [fc(nunits, nunits, **kwargs)]
             self.layers += [nn.ReLU(inplace=True)]
             self.layers += [nn.BatchNorm1d(nunits)]
             self.layers += [nn.Dropout(0.5)]
 
-        oplayer = fc(nunits, 10)
+        oplayer = fc(nunits, 10, **kwargs)
         self.layers = self.layers+[oplayer]
         softmax = nn.Softmax(1)
         self.layers = self.layers+[softmax]
@@ -224,6 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
     parser.add_argument('--nepochs', default=300, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.01, type=float, help='Initial learning rate')
+    parser.add_argument('--sigma', default=0.1, type=float, help='Diff mem spread')
     parser.add_argument('--lr_patience', default=50, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
                             help='Save path for the logs')
@@ -231,13 +235,13 @@ if __name__ == '__main__':
                             help='y uses GPU. n uses CPU')
     args = parser.parse_args()
 
-    T = time.strftime("M%mD%dH%hM%m")
+    T = time.strftime("M%mD%dH%HM%M")
     tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nhidden)+'_lr'+str(args.lr)+'-Time-'+T
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
     # model
-    model = Net(nntype=args.nntype, nunits=args.nunits, nhidden=args.nhidden).to(device)
+    model = Net(nntype=args.nntype, nunits=args.nunits, nhidden=args.nhidden, sigma=args.sigma).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)#, momentum=0.5)
     criterion = nn.CrossEntropyLoss()
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=args.lr_patience, verbose=True)
