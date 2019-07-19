@@ -10,8 +10,6 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tensorboardX import SummaryWriter
 
-
-
 sns.set()
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -60,7 +58,7 @@ class BinMem(torch.autograd.Function):
     def forward(ctx, weight):
         probs = torch.tanh(weight)
         # binarize the weight
-        weight_b = where(probs >= 0, 1, 0.01)
+        weight_b = where(probs >= 0, 1, 0.0)
         ctx.save_for_backward(weight)
         return weight_b
 
@@ -104,7 +102,7 @@ class NoisyBinLinear(nn.Module):
         return input.mm(randweight)
 
 class DiffMemLinear(nn.Module):
-    def __init__(self, num_ip, num_op, sigma=0.2):
+    def __init__(self, num_ip, num_op, sigma=0.05):
         super(DiffMemLinear, self).__init__()
         self.weighta = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
         self.weightb = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
@@ -121,7 +119,6 @@ class DiffMemLinear(nn.Module):
 class Net(nn.Module):
     def __init__(self, nntype='Linear', nunits=50, nhidden=3):
         super(Net, self).__init__()
-
         if nntype == 'Linear':
             fc = nn.Linear
         elif nntype == 'Binary':
@@ -130,12 +127,8 @@ class Net(nn.Module):
             fc = NoisyBinLinear
         elif nntype == 'DiffMem':
             fc = DiffMemLinear
-        # self.fc1 = nn.Linear(28*28, 50)
-        # self.fc1_drop = nn.Dropout(0.2)
-        # self.fc2 = nn.Linear(50, 50)
-        # self.fc2_drop = nn.Dropout(0.2)
-        # self.fc3 = nn.Linear(50, 10)
-
+        else:
+            fc = nn.Linear
         ipdropout = nn.Dropout(0.2)
         iplayer = fc(28*28, nunits)
         self.layers = [ipdropout, iplayer]
@@ -231,15 +224,15 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
     parser.add_argument('--nepochs', default=300, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.01, type=float, help='Initial learning rate')
-    parser.add_argument('--lr_patience', default=20, type=int, help='Learning rate patience')
+    parser.add_argument('--lr_patience', default=50, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
                             help='Save path for the logs')
     parser.add_argument('--cuda', type=str, default='y',
                             help='y uses GPU. n uses CPU')
     args = parser.parse_args()
 
-    T = time.strftime("M%m_D%d_H%H_M%M")
-    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nhidden)+'_lr'+str(args.lr)+'-T'+T
+    T = time.strftime("M%mD%dH%hM%m")
+    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nhidden)+'_lr'+str(args.lr)+'-Time-'+T
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
