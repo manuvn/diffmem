@@ -24,13 +24,10 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-
 def where(cond, x1, x2):
     return cond.float() * x1 + (1 - cond.float()) * x2
 
-
 class Binarize(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx, weight):
         probs = torch.tanh(weight)
@@ -58,6 +55,33 @@ class Binarize(torch.autograd.Function):
         return grad_weight
 binarize = Binarize.apply
 
+class BinMem(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, weight):
+        probs = torch.tanh(weight)
+        # binarize the weight
+        weight_b = where(probs >= 0, 1, 0.01)
+        ctx.save_for_backward(weight)
+        return weight_b
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # This is a pattern that is very convenient - at the top of backward
+        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+        weight = ctx.saved_tensors
+        grad_weight = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+        if ctx.needs_input_grad[0]:
+            grad_weight = grad_output
+        return grad_weight
+binmem = BinMem.apply
 
 class BinLinear(nn.Module):
     def __init__(self, num_ip, num_op):
@@ -79,6 +103,20 @@ class NoisyBinLinear(nn.Module):
         randweight = rand + weight_b
         return input.mm(randweight)
 
+class DiffMemLinear(nn.Module):
+    def __init__(self, num_ip, num_op, sigma=0.2):
+        super(DiffMemLinear, self).__init__()
+        self.weighta = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
+        self.weightb = nn.Parameter(torch.empty(num_ip, num_op).uniform_(), requires_grad=True)
+        self.sigma = sigma
+    def forward(self, input):
+        b_weighta  = binmem(self.weighta)
+        b_weightb  = binmem(self.weightb)
+        randa = torch.randn_like(b_weighta) * self.sigma
+        randb = torch.randn_like(b_weightb) * self.sigma
+        randweight = randa + b_weighta - randb - b_weightb
+        return input.mm(randweight)
+
 
 class Net(nn.Module):
     def __init__(self, nntype='Linear', nunits=50, nhidden=3):
@@ -90,7 +128,8 @@ class Net(nn.Module):
             fc = BinLinear
         elif nntype == 'NoisyBinary':
             fc = NoisyBinLinear
-
+        elif nntype == 'DiffMem':
+            fc = DiffMemLinear
         # self.fc1 = nn.Linear(28*28, 50)
         # self.fc1_drop = nn.Dropout(0.2)
         # self.fc2 = nn.Linear(50, 50)
@@ -186,7 +225,7 @@ if __name__ == '__main__':
 
     # tensorboard --logdir logs
     parser = argparse.ArgumentParser(description='MNIST binary MLP')
-    parser.add_argument('--nntype', default='Binary', type=str, help='Linear, Binary, NoisyBinary')
+    parser.add_argument('--nntype', default='Binary', type=str, help='Linear, Binary, NoisyBinary, DiffMem')
     parser.add_argument('--nunits', default=1024, type=int, help='Number of units in hidden layer')
     parser.add_argument('--nhidden', default=3, type=int, help='Number of hidden layers')
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
