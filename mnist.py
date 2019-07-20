@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 import torch
+import sys
 # from torch.Tensor import masked_fill_ as masked_fill
 import torch.nn as nn
 import torch.nn.functional as F
@@ -81,6 +82,8 @@ def train(epoch, log_interval=200):
     # Loop over each batch from the training set
     for batch_idx, (data, target) in enumerate(train_loader):
         # Copy data to GPU if needed
+        if args.loss == 'Hinge':
+            target = torch.Tensor(to_categorical(target,10))
         data = data.to(device)
         target = target.to(device)
 
@@ -109,12 +112,18 @@ def validate(loss_vector, accuracy_vector):
     model.eval()
     val_loss, correct = 0, 0
     for data, target in validation_loader:
+        if args.loss == 'Hinge':
+            tgt = torch.Tensor(to_categorical(target,10))
+        else:
+            tgt = target
         data = data.to(device)
         target = target.to(device)
+        tgt = tgt.to(device)
         output = model(data)
-        val_loss += criterion(output, target).data.item()
+        val_loss += criterion(output, tgt).data.item()
         pred = output.data.max(1)[1] # get the index of the max log-probability
         correct += pred.eq(target.data).cpu().sum()
+        # correct += output.eq(target.data).cpu().sum()
 
     val_loss /= len(validation_loader)
     loss_vector.append(val_loss)
@@ -144,6 +153,8 @@ if __name__ == '__main__':
     parser.add_argument('--lr_patience', default=100, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
                             help='Save path for the logs')
+    parser.add_argument('--loss', type=str, default='Hinge', 
+                            help='Hinge, CrossEntropy')
     parser.add_argument('--cuda', type=str, default='y',
                             help='y uses GPU. n uses CPU')
     args = parser.parse_args()
@@ -154,7 +165,13 @@ if __name__ == '__main__':
                 nhidden=args.nhidden, 
                 sigma=args.sigma).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)#, momentum=0.5)
-    criterion = nn.CrossEntropyLoss()
+    if args.loss == 'Hinge':
+        criterion = nn.MultiLabelSoftMarginLoss()
+    elif args.loss == 'CrossEntropy':
+        criterion = nn.CrossEntropyLoss()
+    else:
+        print('Unsupported loss')
+        sys.exit()
     scheduler = ReduceLROnPlateau(optimizer, mode='min', 
                             factor=0.1, 
                             patience=args.lr_patience, 
@@ -181,7 +198,6 @@ if __name__ == '__main__':
     for (X_train, y_train) in train_loader:
         print('X_train:', X_train.size(), 'type:', X_train.type())
         print('y_train:', y_train.size(), 'type:', y_train.type())
-        print(torch.max(X_train))
         break
 
     # Train
