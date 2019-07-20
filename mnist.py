@@ -146,13 +146,13 @@ if __name__ == '__main__':
     # tensorboard --logdir logs
     parser = argparse.ArgumentParser(description='MNIST binary MLP')
     parser.add_argument('--nntype', default='Binary', type=str, help='Linear, Binary, NoisyBinary, Ternary, NoisyTernary, DiffMem, DiffMemN')
-    parser.add_argument('--nunits', default=1024, type=int, help='Number of units in hidden layer')
+    parser.add_argument('--nunits', default=512, type=int, help='Number of units in hidden layer')
     parser.add_argument('--nhidden', default=3, type=int, help='Number of hidden layers')
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
     parser.add_argument('--nepochs', default=300, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.001, type=float, help='Initial learning rate')
     parser.add_argument('--sigma', default=0.1, type=float, help='Diff mem spread')
-    parser.add_argument('--lr_patience', default=100, type=int, help='Learning rate patience')
+    parser.add_argument('--lr_patience', default=10, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
                             help='Save path for the logs')
     parser.add_argument('--loss', type=str, default='Hinge', 
@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     # Train
     T = time.strftime("M%mD%dH%HM%M")
-    tboard_dir = args.logpath+args.nntype+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nunits)+'_S'+str(args.sigma)+'_lr'+str(args.lr)+'-Time-'+T
+    tboard_dir = args.logpath+args.nntype+'_'+str(args.loss)++'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nunits)+'_S'+str(args.sigma)+'_lr'+str(args.lr)+'-Time-'+T
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
