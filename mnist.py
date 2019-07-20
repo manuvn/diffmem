@@ -149,7 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('--nunits', default=512, type=int, help='Number of units in hidden layer')
     parser.add_argument('--nhidden', default=3, type=int, help='Number of hidden layers')
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
-    parser.add_argument('--nepochs', default=300, type=int, help='Number of training epochs')
+    parser.add_argument('--nepochs', default=100, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.001, type=float, help='Initial learning rate')
     parser.add_argument('--sigma', default=0.1, type=float, help='Diff mem spread')
     parser.add_argument('--lr_patience', default=10, type=int, help='Learning rate patience')
@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     # Train
     T = time.strftime("M%mD%dH%HM%M")
-    tboard_dir = args.logpath+args.nntype+'_'+str(args.loss)++'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nunits)+'_S'+str(args.sigma)+'_lr'+str(args.lr)+'-Time-'+T
+    tboard_dir = args.logpath+args.nntype+'_'+args.loss+'_B'+str(args.batch_size)+'_H'+str(args.nhidden)+'_N'+str(args.nunits)+'_S'+str(args.sigma)+'_lr'+str(args.lr)+'-Time-'+T
     # writer = SummaryWriter('./logs')
     writer = SummaryWriter(tboard_dir)
 
