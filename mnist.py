@@ -66,8 +66,10 @@ class Net(nn.Module):
 
         oplayer = fc(nunits, 10, **kwargs)
         self.layers = self.layers+[oplayer]
-        softmax = nn.Softmax(1)
-        self.layers = self.layers+[softmax]
+        self.layers += [nn.BatchNorm1d(10, eps=1e-6, momentum=0.9)]
+        if args.loss == 'CrossEntropy':
+            softmax = nn.Softmax(1)
+            self.layers = self.layers+[softmax]
         self.net = nn.Sequential(*self.layers)
 
     def forward(self, x):
