@@ -61,12 +61,14 @@ class Net(nn.Module):
         for idx in range(nhidden):
             self.layers += [fc(nunits, nunits, **kwargs)]
             self.layers += [nn.ReLU(inplace=True)]
-            self.layers += [nn.BatchNorm1d(nunits, eps=1e-6, momentum=0.9)]
+            # self.layers += [nn.BatchNorm1d(nunits, eps=1e-6, momentum=0.9)]
+            self.layers += [nn.LayerNorm(nunits, eps=1e-6, elementwise_affine=False)]
             self.layers += [nn.Dropout(drop_h)]
 
         oplayer = fc(nunits, 10, **kwargs)
         self.layers = self.layers+[oplayer]
-        self.layers += [nn.BatchNorm1d(10, eps=1e-6, momentum=0.9)]
+        # self.layers += [nn.BatchNorm1d(10, eps=1e-6, momentum=0.9)]
+        self.layers += [nn.LayerNorm(10, eps=1e-6, elementwise_affine=False)]
         if args.loss == 'CrossEntropy':
             softmax = nn.Softmax(1)
             self.layers = self.layers+[softmax]
@@ -151,6 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
     parser.add_argument('--nepochs', default=100, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.001, type=float, help='Initial learning rate')
+    parser.add_argument('--min_lr', default=0.0001, type=float, help='Minimum learning rate')
     parser.add_argument('--sigma', default=0.1, type=float, help='Diff mem spread')
     parser.add_argument('--lr_patience', default=10, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
@@ -178,10 +181,11 @@ if __name__ == '__main__':
                             factor=0.1, 
                             patience=args.lr_patience, 
                             verbose=True,
-                            min_lr = 1e-4)
+                            min_lr = args.min_lr)
 
     print(model)
-
+    for name,val in model.named_parameters():
+        print(name, val)
     # data
     batch_size = args.batch_size
     train_dataset = datasets.MNIST('./data', 

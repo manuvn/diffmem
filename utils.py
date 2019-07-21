@@ -115,6 +115,7 @@ class NoisyBinLinear(nn.Module):
         weight_b  = binarize(self.weight)
         rand = torch.randn_like(weight_b) * self.sigma
         randweight = rand + weight_b
+        randweight = ClipW(randweight)
         return input.mm(randweight)
 
 ################################
@@ -124,8 +125,9 @@ class Ternarize(torch.autograd.Function):
     def forward(ctx, weight):
         # probs = torch.tanh(weight)
         # binarize the weight
-        weight_t = where(weight >= 0, 1, -1)
-        weight_t = where((weight >= -tern_boundary)&(weight <= tern_boundary), 0, weight_t)
+        weight_t = where(weight >= tern_boundary, 1, weight)
+        weight_t = where((weight_t >= -tern_boundary)&(weight_t <= tern_boundary), 0, weight_t)
+        weight_t = where((weight_t <= -tern_boundary), -1, weight_t)
         ctx.save_for_backward(weight)
         return weight_t
 
@@ -174,55 +176,4 @@ class NoisyTernLinear(nn.Module):
         weight_t  = ternarize(self.weight)
         rand = torch.randn_like(weight_t) * self.sigma * tern_boundary
         randweight = rand + weight_t
-        return input.mm(randweight)
-################################
-
-class BinMem(Binarize):
-    @staticmethod
-    def forward(ctx, weight):
-        # probs = torch.tanh(weight)
-        # binarize the weight
-        weight_b = where(weight >= 0, 1, 0.01)
-        ctx.save_for_backward(weight)
-        return weight_b
-binmem = BinMem.apply
-
-class DiffMemLinear(nn.Module):
-    def __init__(self, num_ip, num_op, sigma=0.05):
-        super(DiffMemLinear, self).__init__()
-        var = 2/(num_ip + num_op)
-        init_wa = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weighta = nn.Parameter(init_wa, requires_grad=True)
-        init_wb = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weightb = nn.Parameter(init_wb, requires_grad=True)
-        self.sigma = sigma
-    def forward(self, input):
-        with torch.no_grad():
-            self.weighta.data = Rectify(self.weighta.data)
-            self.weightb.data = Rectify(self.weightb.data)
-        b_weighta  = binmem(self.weighta)
-        b_weightb  = binmem(self.weightb)
-        randa = torch.randn_like(b_weighta) * self.sigma
-        randb = torch.randn_like(b_weightb) * self.sigma
-        randweight = randa + b_weighta - randb - b_weightb
-        return input.mm(randweight)
-
-class DiffMemNormLinear(nn.Module):
-    def __init__(self, num_ip, num_op, sigma=0.05):
-        super(DiffMemNormLinear, self).__init__()
-        var = 2/(num_ip + num_op)
-        init_wa = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weighta = nn.Parameter(init_wa, requires_grad=True)
-        init_wb = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weightb = nn.Parameter(init_wb, requires_grad=True)
-        self.sigma = sigma
-    def forward(self, input):
-        with torch.no_grad():
-            self.weighta.data = Rectify(self.weighta.data)
-            self.weightb.data = Rectify(self.weightb.data)
-        b_weighta  = binmem(self.weighta)
-        b_weightb  = binmem(self.weightb)
-        randa = torch.randn_like(b_weighta) * self.sigma
-        randb = torch.randn_like(b_weightb) * self.sigma
-        randweight = randa + b_weighta - randb - b_weightb/(randa + b_weighta + randb + b_weightb)
         return input.mm(randweight)
