@@ -7,6 +7,10 @@ python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 -
 python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=0.6
 python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=0.8
 python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=1
+python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=1.2
+python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=1.4
+python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=1.6
+python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=1.8
 python mnist.py --nntype=NoisyBinary --nunits=512 --nhidden=3 --batch_size=100 --sigma=2
 
 
