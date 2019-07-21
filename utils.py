@@ -89,19 +89,6 @@ class Binarize(torch.autograd.Function):
         return grad_weight
 binarize = Binarize.apply
 
-class BinLinear(nn.Module):
-    def __init__(self, num_ip, num_op):
-        super(BinLinear, self).__init__()
-        var = 2/(num_ip + num_op)
-        init_w = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weight = nn.Parameter(init_w, requires_grad=True)
-
-    def forward(self, input):
-        with torch.no_grad():
-            self.weight.data = ClipW(self.weight.data)
-        weight_b = binarize(self.weight)
-        return input.mm(weight_b)
-
 class NoisyBinLinear(nn.Module):
     def __init__(self, num_ip, num_op, sigma=0.2):
         super(NoisyBinLinear, self).__init__()
@@ -149,19 +136,6 @@ class Ternarize(torch.autograd.Function):
             grad_weight = grad_output
         return grad_weight
 ternarize = Ternarize.apply
-
-class TernLinear(nn.Module):
-    def __init__(self, num_ip, num_op):
-        super(TernLinear, self).__init__()
-        var = 2/(num_ip + num_op)
-        init_w = torch.empty(num_ip, num_op).normal_(mean=0, std=var**0.5)
-        self.weight = nn.Parameter(init_w, requires_grad=True)
-
-    def forward(self, input):
-        with torch.no_grad():
-            self.weight.data = ClipW(self.weight.data)
-        weight_b = ternarize(self.weight)
-        return input.mm(weight_b)
 
 class NoisyTernLinear(nn.Module):
     def __init__(self, num_ip, num_op, sigma=0.2):

@@ -31,21 +31,11 @@ class Net(nn.Module):
         kwargs = {}
         if nntype == 'Linear':
             fc = nn.Linear
-        elif nntype == 'Binary':
-            fc = BinLinear
         elif nntype == 'NoisyBinary':
             fc = NoisyBinLinear
             kwargs['sigma'] = sigma
-        elif nntype == 'Ternary':
-            fc = TernLinear
         elif nntype == 'NoisyTernary':
             fc = NoisyTernLinear
-            kwargs['sigma'] = sigma
-        elif nntype == 'DiffMem':
-            fc = DiffMemLinear
-            kwargs['sigma'] = sigma
-        elif nntype == 'DiffMemN':
-            fc = DiffMemNormLinear
             kwargs['sigma'] = sigma
         else:
             fc = nn.Linear
@@ -147,14 +137,14 @@ if __name__ == '__main__':
 
     # tensorboard --logdir logs
     parser = argparse.ArgumentParser(description='MNIST binary MLP')
-    parser.add_argument('--nntype', default='Binary', type=str, help='Linear, Binary, NoisyBinary, Ternary, NoisyTernary, DiffMem, DiffMemN')
+    parser.add_argument('--nntype', default='Binary', type=str, help='Linear, NoisyBinary, NoisyTernary')
     parser.add_argument('--nunits', default=512, type=int, help='Number of units in hidden layer')
     parser.add_argument('--nhidden', default=3, type=int, help='Number of hidden layers')
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
     parser.add_argument('--nepochs', default=100, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.001, type=float, help='Initial learning rate')
     parser.add_argument('--min_lr', default=0.0001, type=float, help='Minimum learning rate')
-    parser.add_argument('--sigma', default=0.1, type=float, help='Diff mem spread')
+    parser.add_argument('--sigma', default=0.0, type=float, help='Noise injection')
     parser.add_argument('--lr_patience', default=10, type=int, help='Learning rate patience')
     parser.add_argument('--logpath', type=str, default='./logs/', 
                             help='Save path for the logs')
@@ -184,8 +174,8 @@ if __name__ == '__main__':
                             min_lr = args.min_lr)
 
     print(model)
-    for name,val in model.named_parameters():
-        print(name, val)
+    # for name,val in model.named_parameters():
+    #     print(name, val)
     # data
     batch_size = args.batch_size
     train_dataset = datasets.MNIST('./data', 
