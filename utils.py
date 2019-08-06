@@ -102,7 +102,8 @@ class NoisyBinLinear(nn.Module):
         weight_b  = binarize(self.weight)
         rand = torch.randn_like(weight_b) * self.sigma
         randweight = rand + weight_b
-        randweight = ClipW(randweight)
+        with torch.no_grad():
+            randweight.data = ClipW(randweight.data)
         return input.mm(randweight)
 
 ################################

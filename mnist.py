@@ -141,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--nunits', default=512, type=int, help='Number of units in hidden layer')
     parser.add_argument('--nhidden', default=3, type=int, help='Number of hidden layers')
     parser.add_argument('--batch_size', default=200, type=int, help='Batch size')
-    parser.add_argument('--nepochs', default=100, type=int, help='Number of training epochs')
+    parser.add_argument('--nepochs', default=50, type=int, help='Number of training epochs')
     parser.add_argument('--lr', default=0.001, type=float, help='Initial learning rate')
     parser.add_argument('--min_lr', default=0.0001, type=float, help='Minimum learning rate')
     parser.add_argument('--sigma', default=0.0, type=float, help='Noise injection')
@@ -213,6 +213,8 @@ if __name__ == '__main__':
         lr = get_lr(optimizer)
         writer.add_scalar('Learning rate', lr, epoch)
 
+    np.save(f'results/lossv_{args.nntype}'+f'{args.sigma}.npy',(lossv, args.nntype, args.sigma), allow_pickle=True)
+    np.save(f'results/accv_{args.nntype}'+f'{args.sigma}.npy',(accv, args.nntype, args.sigma), allow_pickle=True)
     # Plot performance
     plt.figure(figsize=(5,3))
     plt.plot(np.arange(1,epochs+1), lossv)
